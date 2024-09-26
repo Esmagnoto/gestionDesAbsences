@@ -45,7 +45,7 @@ int main() {
 			}
 			else
 			{
-				printf("NomIncorrect\n");
+				printf("Nom Incorrect\n");
 			}
 
 			printf("print entree %s %d\n", nomEtudiant, numeroGroupe);
