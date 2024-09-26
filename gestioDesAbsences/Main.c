@@ -34,7 +34,7 @@ int main() {
 			scanf("%30s", nomEtudiant);
 			if (scanf("%d", &numeroGroupe) == 1) {
 				if (strcmp(etudiants[cmpEtudiants].nomEtudiant, nomEtudiant) == 0) {
-					printf("Nom Incorrect\n");
+					printf("Nom  Incorrect\n");
 				}
 				else
 				{
