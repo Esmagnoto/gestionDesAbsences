@@ -1,7 +1,9 @@
 #include <stdio.h>
+#include <string.h>
+#include <assert.h>
 #pragma warning(disable:4996)
 #pragma warning(disable : 6031)
-#include <string.h>
+
 
 enum { MAX_CARACTERES = 31, MAX_ETUDIANTS = 15, DEMI_JOURNEE = 2, LIMIT_ABSENCES = 5 };
 typedef enum {ETUDIANT_NON_TROUVE, ETUDIANT_TROUVE} EtudiantStatus;
@@ -19,7 +21,9 @@ typedef struct {
 } Etudiant;
 
 // verifie si un etudiant est ou n'est pas déjà inscrit dans la table.
-EtudiantStatus verifier(Etudiant tableEtudiants[], char nomEtudiant[]) {
+EtudiantStatus verifierInscription(Etudiant tableEtudiants[MAX_ETUDIANTS], char nomEtudiant[]) {
+	assert(tableEtudiants != NULL && nomEtudiant != NULL);
+
 	EtudiantStatus status = ETUDIANT_NON_TROUVE;
 	for (int i = 0; i < MAX_ETUDIANTS; i++) {
 		if (strcmp(tableEtudiants[i].nomEtudiant, nomEtudiant) == 0) {
@@ -30,10 +34,16 @@ EtudiantStatus verifier(Etudiant tableEtudiants[], char nomEtudiant[]) {
 }
 
 // faire une inscription table etudiants declaré dans main().
-void inscrireEtudiant(Etudiant tableEtudiants[], int cmpEtudiants,char nomEtudiant[MAX_CARACTERES], int numeroGroupe) {
+void inscrireEtudiant(Etudiant tableEtudiants[MAX_ETUDIANTS], int cmpEtudiants,char nomEtudiant[MAX_CARACTERES], int numeroGroupe) {
+	assert(nomEtudiant != NULL && strlen(nomEtudiant) > 0);
+	assert(numeroGroupe > 0);
+	assert(cmpEtudiants >= 0 && cmpEtudiants < MAX_ETUDIANTS);
+	assert(tableEtudiants != NULL);
+
 	strcpy(tableEtudiants[cmpEtudiants].nomEtudiant, nomEtudiant);
 	tableEtudiants[cmpEtudiants].numeroGroupe = numeroGroupe;
-	printf("Inscription enregistree (%d)\n", cmpEtudiants);
+	tableEtudiants[cmpEtudiants].nombreAbsences = 0;
+	
 }
 
 //verifier nom etudiant.
@@ -42,12 +52,10 @@ void verifierNom() {
 };
 
 int main() {
-	char entree[MAX_CARACTERES];
+	char entree[MAX_CARACTERES] = {0};
 	Etudiant etudiants[MAX_ETUDIANTS]= {0} ;
-	int cmpEtudiants = 1;
-	//entree[MAX_CARACTERES - 1] = '\0'; // ajoute explicitement le caract�re nul
-
-
+	int cmpEtudiants = 0;
+	
 	while (1) {
 
 		printf("ecrire une commande: ");
@@ -57,12 +65,12 @@ int main() {
 		else if (strcmp(entree, "inscription") == 0)
 		{
 			char nomEtudiant[MAX_CARACTERES];
-			int numeroGroupe;
+			unsigned int numeroGroupe;
 			scanf("%30s", nomEtudiant);
-			if (scanf("%d", &numeroGroupe) == 1 && verifier(etudiants, nomEtudiant) == ETUDIANT_NON_TROUVE && numeroGroupe > 0) 
+			if (scanf("%u", &numeroGroupe) == 1 && verifierInscription(etudiants, nomEtudiant) == ETUDIANT_NON_TROUVE && numeroGroupe > 0) 
 			{
-				verifierNom(nomEtudiant);
 				inscrireEtudiant(etudiants, cmpEtudiants, nomEtudiant, numeroGroupe);
+				printf("Inscription enregistree (%d)\n", cmpEtudiants + 1);
 				++cmpEtudiants;
 			}
 			else
