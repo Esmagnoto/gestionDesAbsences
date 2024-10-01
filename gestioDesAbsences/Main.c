@@ -5,19 +5,22 @@
 #pragma warning(disable : 6031)
 
 
-enum { MAX_CARACTERES = 31, MAX_ETUDIANTS = 15, DEMI_JOURNEE = 2, LIMIT_ABSENCES = 5 };
+enum { MAX_CARACTERES = 31, MAX_ETUDIANTS = 15, DEMI_JOURNEE = 2, MAX_ABSENCES = 40 };
 typedef enum {ETUDIANT_NON_TROUVE, ETUDIANT_TROUVE} EtudiantStatus;
+typedef enum {ABSENT_VALIDE, ABSENT_INVALIDE}AbsentStatus;
+typedef enum { AM = 1, PM = 2 } PeriodeEtudes;
+typedef enum {JUSITIFIE, NON_JUSTIFIE}AbsenceStatus;
 
 typedef struct {
-	int jour;
-	int periode;
-	int etudiantId;
+	PeriodeEtudes periode;
+	AbsenceStatus status;
 } Absence;
 
 typedef struct {
 	char nomEtudiant[MAX_CARACTERES];
 	int numeroGroupe;
-	int nombreAbsences;
+	Absence absences[MAX_ABSENCES];
+	
 } Etudiant;
 
 // verifie si un etudiant est ou n'est pas déjà inscrit dans la table.
@@ -42,13 +45,29 @@ void inscrireEtudiant(Etudiant tableEtudiants[MAX_ETUDIANTS], int cmpEtudiants,c
 
 	strcpy(tableEtudiants[cmpEtudiants].nomEtudiant, nomEtudiant);
 	tableEtudiants[cmpEtudiants].numeroGroupe = numeroGroupe;
-	tableEtudiants[cmpEtudiants].nombreAbsences = 0;
 	
 }
 
+AbsentStatus verifierAbsent(int etudiantId,int jour, char periode[DEMI_JOURNEE], Etudiant tableEtudiants[MAX_ETUDIANTS]) {
+	AbsentStatus status = ABSENT_INVALIDE;
+	if (etudiantId < MAX_ETUDIANTS && jour < 41 && etudiantId > 0 && jour > 0)
+	{
+		if (verifierInscription(tableEtudiants, tableEtudiants[etudiantId].nomEtudiant) == ETUDIANT_TROUVE)
+		{
+			if (strcmp(periode, "am") == 0 || strcmp(periode, "pm") == 0)
+			{
+				status = ABSENT_VALIDE;
+			}
+		}
+	}
+	return status;
+}
+
+void verifierAbsence(etudiantId, jour, periode)
+
 int main() {
 	char entree[MAX_CARACTERES] = {0};
-	Etudiant etudiants[MAX_ETUDIANTS]= {0} ;
+	Etudiant etudiants[MAX_ETUDIANTS] = {0} ;
 	int cmpEtudiants = 0;
 	
 	while (1) {
@@ -76,6 +95,16 @@ int main() {
 		}
 		else if (strcmp(entree, "absence") == 0) 
 		{
+			int jour;
+			char periode[DEMI_JOURNEE];
+			int etudiantId;
+			scanf("%d", &etudiantId);
+			scanf("%d", &jour);
+			scanf("%s", periode);
+			if (verifierAbsent(etudiantId, jour, periode, etudiants) == ABSENT_VALIDE)
+			{
+				verifierAbsence(etudiantId, jour, periode);
+			}
 			
 		}
 		else
@@ -88,52 +117,3 @@ int main() {
 	}
 
 }
-
-/*int etudiantId;
-			int jour;
-			char periode[DEMI_JOURNEE];
-			scanf("%d",&etudiantId);
-			scanf("%d",&jour);
-			scanf("%s",periode);
-
-			if (verifierEtudiants(etudiants, periode) == 1) {
-
-				if(0 < jour < 41) {
-					if(strcmp(periode, "am") == 0 || strcmp(periode, "pm") == 0){
-						etudiants[etudiantId].absences[jour].jour = jour;
-						strcpy(etudiants[etudiantId].absences[jour].periode, periode);
-						etudiants[etudiantId].nombreAbsences += 1;
-						printf("Absence enregistree [%d]", etudiants[etudiantId].nombreAbsences);
-					}
-				}
-			}*/
-
-
-
-/*
-* 
-    The user types "inscription caio 108" and presses enter.
-    The fgets function reads the entire line of input, including the newline character (\n), into the inputLine buffer.
-    The sscanf function parses the input string, extracting the name "caio" and the number 108.
-    The program checks if the name is already registered using the verifier function. If it's not registered, the program proceeds to register the student using the inscrireEtudiant function.
-    The program increments the cmpEtudiants counter and continues to the next iteration of the main loop.
-
-
-else if (strcmp(entree, "inscription") == 0) {
-    char inputLine[MAX_CARACTERES];
-    printf("Enter name and number: ");
-    fgets(inputLine, MAX_CARACTERES, stdin);
-
-    char nomEtudiant[MAX_CARACTERES];
-    int numeroGroupe;
-    if (sscanf(inputLine, "inscription %s %d", nomEtudiant, &numeroGroupe) == 2) {
-        if (verifier(etudiants, nomEtudiant) == ETUDIANT_NON_TROUVE) {
-            inscrireEtudiant(etudiants, cmpEtudiants, nomEtudiant, numeroGroupe);
-            ++cmpEtudiants;
-        } else {
-            printf("Nom Incorrect\n");
-        }
-    } else {
-        printf("Invalid input format. Please enter 'inscription <name> <number>'.\n");
-    }
-}*/
