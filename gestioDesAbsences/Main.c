@@ -46,11 +46,6 @@ void inscrireEtudiant(Etudiant tableEtudiants[MAX_ETUDIANTS], int cmpEtudiants,c
 	
 }
 
-//verifier nom etudiant.
-void verifierNom() {
-	
-};
-
 int main() {
 	char entree[MAX_CARACTERES] = {0};
 	Etudiant etudiants[MAX_ETUDIANTS]= {0} ;
@@ -78,7 +73,6 @@ int main() {
 				printf("Nom Incorrect\n");
 			}
 
-			//printf("print entree %s %d\n", nomEtudiant, numeroGroupe);
 		}
 		else if (strcmp(entree, "absence") == 0) 
 		{
