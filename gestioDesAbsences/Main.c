@@ -80,15 +80,15 @@ void inscrireEtudiant(Etudiant tableEtudiants[MAX_ETUDIANTS], int cmpEtudiants, 
 AbsentStatus verifierAbsent(int etudiantId, int jour, char periode[DEMI_JOURNEE],
                             Etudiant tableEtudiants[MAX_ETUDIANTS])
 {
-	assert(etudiantId < MAX_ETUDIANTS && etudiantId > 0);
-	AbsentStatus status = ABSENT_INVALIDE;
+	assert(etudiantId <= MAX_ETUDIANTS && etudiantId > 0);
+	AbsentStatus status = IDENTIFIANT_INCORRECT;
 	if (jour < 41 && jour > 0)
 	{
-		if (verifierInscriptionStatus(tableEtudiants, tableEtudiants[etudiantId].nomEtudiant) == ETUDIANT_TROUVE)
+		if (verifierInscriptionStatus(tableEtudiants, tableEtudiants[etudiantId-1].nomEtudiant) == ETUDIANT_TROUVE)
 		{
 			if (strcmp(periode, "am") == 0 || strcmp(periode, "pm") == 0)
 			{
-				if (tableEtudiants[etudiantId].absences[jour].periode != AM + PM)
+				if (tableEtudiants[etudiantId-1].absences[jour].periode != AM + PM)
 				{
 					status = ABSENT_VALIDE;
 				}
@@ -96,7 +96,6 @@ AbsentStatus verifierAbsent(int etudiantId, int jour, char periode[DEMI_JOURNEE]
 			}
 			else { status = DEMI_JOURNEE_INCORRECTE; }
 		}
-		else { status = IDENTIFIANT_INCORRECT; }
 	}
 	else { status = DATE_INCORRECTE; }
 	return status;
@@ -146,18 +145,20 @@ int main()
 			switch (status)
 			{
 			case ABSENT_VALIDE:
-				if (etudiants[etudiantId].absences[jour].periode == 2 || etudiants[etudiantId].absences[jour].periode ==
+				if (etudiants[etudiantId].absences[jour].periode == PM || etudiants[etudiantId].absences[jour].periode ==
 					0)
 				{
 					etudiants[etudiantId].absences[jour].periode += AM;
 					etudiants[etudiantId].absences[jour].status = ATTENTE_JUSTIFICATIF;
+
 				}
-				else if (etudiants[etudiantId].absences[jour].periode == 1 || etudiants[etudiantId].absences[jour].
+				else if (etudiants[etudiantId].absences[jour].periode == AM || etudiants[etudiantId].absences[jour].
 					periode == 0)
 				{
 					etudiants[etudiantId].absences[jour].periode += PM;
 					etudiants[etudiantId].absences[jour].status = ATTENTE_JUSTIFICATIF;
 				}
+				printf("Absence enregistree");
 				break;
 
 			case IDENTIFIANT_INCORRECT: printf("Identifiant incorrect\n");
