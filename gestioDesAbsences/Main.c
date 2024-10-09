@@ -1,8 +1,8 @@
-#include <stdio.h>
+/*#include <stdio.h>
 #include <string.h>
 #include <assert.h>
 #pragma warning(disable:4996)
-#pragma warning(disable : 6031)
+#pragma warning(disable : 6031)//IGNORER RETOUR SCANF
 
 //
 enum { MAX_CARACTERES = 31, MAX_ETUDIANTS = 15, DEMI_JOURNEE = 3, MAX_ABSENCES = 40 };
@@ -199,3 +199,4 @@ AbsenceStatus verifierAbsent(int etudiantId, int jour, char periode[DEMI_JOURNEE
 	absence->periode += (strcmp(periode, "am") == 0) ? AM : PM;
 	return ABSENCE_VALIDE;
 }
+*/
