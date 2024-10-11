@@ -21,10 +21,9 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{a24e0848-2f8a-4fc7-bade-45b2fc48d243}</ProjectGuid>
-    <RootNamespace>gestioDesAbsences</RootNamespace>
+    <ProjectGuid>{d0961a71-dab0-434f-9d37-203f9266f854}</ProjectGuid>
+    <RootNamespace>gestionDesAbsences</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>gestionDesAbsences</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -128,6 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="exemple.c" />
     <ClCompile Include="Main.c" />
     <ClCompile Include="Main2.c" />
   </ItemGroup>
