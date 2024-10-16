@@ -9,6 +9,7 @@
 #define MAX_CHAR 31
 #define MAX_ABSENCES 80
 #define MAX_ETUDIANTS 100
+#define JOUR_CONCERNE 80
 
 typedef enum { TROUVE, NONTROUVE } EtudiantStatus;
 
@@ -20,11 +21,15 @@ typedef enum
 
 typedef enum { AM = 1, PM = 2 } Periode;
 
+
+
 typedef struct
 {
-    char justificatif[MAX_CHAR_JUSTIFICATIF];
+    char justificatif[JOUR_CONCERNE][MAX_CHAR_JUSTIFICATIF];
     int jourConcernant;
     int demiJourneeConcernant;
+    int identifiantAbsence;
+    AbsenceStatus status;
 } Absence;
 
 typedef struct
@@ -45,6 +50,7 @@ void enregistrerAbsence(Etudiant* etudiants, int etudiantId, int jour, const cha
 void gererCommandeAbsence(Etudiant* tableauEtudiants, int* totalAbsences);
 int comparer(const void* etudiantA, const void* etudiantB);
 void afficherListeEtudiants(int nombreEtudiantsInscrits, Etudiant* tableauEtudiants);
+int trouverAbsence(Etudiant* tableauEtudiants, int identificateurAbsence);
 
 int main()
 {
@@ -78,6 +84,21 @@ int main()
         {
             afficherListeEtudiants(nombreEtudiantsInscrits, tableauEtudiants);
         }
+        else if (strcmp(entree,"justificatif") == 0)
+        {
+            int identificateurAbsence;
+            int jour;
+            char justificatif[51];
+            scanf("%d %d", &identificateurAbsence, &jour);
+            fgets(justificatif, 51, stdin);
+            int absence = trouverAbsence(tableauEtudiants, identificateurAbsence);
+            if (jour >= tableauEtudiants[0].absences[0].identifiantAbsence + 3)
+            {
+
+            }
+
+            
+        }
         else
         {
             printf("Commande invalide\n");
@@ -86,8 +107,13 @@ int main()
     }
 }
 
+//cette fonction peut etre divise en trois fonction, une fonction pour initializer un etudiant, et une pour une absence
+// j'ai juge pas nécéssaire dans mon programme car, je n'a pas besoin de initializer des etdiants aprés la
+//demarrage du programme, mais si le tableua d'etudiant etais alloque avec memoire dynamique malloc() 
+// ça peurrait etre util et dans d'autres cas aussi.
 void initializerTableauEtudiants(Etudiant* etudiants)
 {
+    int absenceCompteur = 0;
     assert(etudiants != NULL);
     for (int i = 0; i < MAX_ETUDIANTS; ++i)
     {
@@ -100,7 +126,10 @@ void initializerTableauEtudiants(Etudiant* etudiants)
         {
             etudiants[i].absences[j].demiJourneeConcernant = 0;
             etudiants[i].absences[j].jourConcernant = 0;
-            etudiants[i].absences[j].justificatif[0] = '\0';
+            etudiants[i].absences[j].justificatif[0][0] = '\0';
+            etudiants[i].absences[j].status = -1;
+            etudiants[i].absences[j].identifiantAbsence = absenceCompteur;
+            ++absenceCompteur;
         }
     }
 }
@@ -212,7 +241,7 @@ void enregistrerAbsence(Etudiant* etudiants, int etudiantId, int jour, const cha
         return;
     }
 
-    etudiants[etudiantId - 1].absences[absenceNumero].justificatif[0] = '\0';
+    etudiants[etudiantId - 1].absences[absenceNumero].justificatif[0][0] = '\0';
     etudiants[etudiantId - 1].absences[absenceNumero].jourConcernant = jour;
     etudiants[etudiantId - 1].absences[absenceNumero].demiJourneeConcernant = (strcmp(periode, "am") == 0) ? AM : PM;
     etudiants[etudiantId - 1].nombreAbsences++;
@@ -304,5 +333,20 @@ void afficherListeEtudiants(int nombreEtudiantsInscrits, Etudiant* tableauEtudia
             }
         }
         printf("%3d\n", totalAbsence);
+    }
+}
+
+int trouverAbsence(Etudiant* tableauEtudiants, int identificateurAbsence) {
+    for (int i = 0; i < MAX_ETUDIANTS; i++)
+    {
+        for (size_t j = 0; j < MAX_ABSENCES; j++)
+        {
+            if (tableauEtudiants[i].absences[j].identifiantAbsence == identificateurAbsence)
+            {
+                printf("%d %s %d", tableauEtudiants[i].identifiant, tableauEtudiants[i].nomEtudiant, tableauEtudiants[i].absences[j].identifiantAbsence);
+            }
+            
+        }
+        
     }
 }
