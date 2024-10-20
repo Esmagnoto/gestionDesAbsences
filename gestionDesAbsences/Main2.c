@@ -1,25 +1,24 @@
-/*#include <stdio.h>
+#include <stdio.h>
 #include <assert.h>
-#include <string.h>
+#include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
+
 #pragma warning(disable:4996)
-#pragma warning(disable:6031)//IGNORER RETOUR SCANF
+#pragma warning(disable:6031) // IGNORER RETOUR SCANF
 
-
-enum
-{
-	MAX_CHAR_JUSTIFICATIF = 50,
-	MAX_CHAR = 31,
-	MAX_ABSENCES = 80,
-	MAX_ETUDIANTS = 100
-};
+#define MAX_CHAR_JUSTIFICATIF 51
+#define MAX_CHAR 31
+#define MAX_ABSENCES 80
+#define MAX_ETUDIANTS 100
 
 typedef enum { TROUVE, NONTROUVE } EtudiantStatus;
 
 typedef enum
 {
-	ATTENTE_JUSTIFICATIF, JUSITIFIE, NON_JUSTIFIE, ABSENCE_NON_CONNUE, IDENTIFIANT_INVALIDE,
-	DEMI_JOURNEE_INVALIDE, ABSENCE_DEJA_CONNUE, DATE_INVALIDE, DEPASSEMENT_DE_FORMAT
+	ATTENTE_JUSTIFICATIF, JUSTIFIE, NON_JUSTIFIE, ABSENCE_NON_CONNUE,
+	IDENTIFIANT_INVALIDE, DEMI_JOURNEE_INVALIDE, ABSENCE_DEJA_CONNUE,
+	DATE_INVALIDE, DEPASSEMENT_DE_FORMAT, ENCOURS
 } AbsenceStatus;
 
 typedef enum { AM = 1, PM = 2 } Periode;
@@ -27,57 +26,77 @@ typedef enum { AM = 1, PM = 2 } Periode;
 typedef struct
 {
 	char justificatif[MAX_CHAR_JUSTIFICATIF];
-	int jourConcernant;
-	int demiJourneeConcernant;
+	unsigned int jourConcernant;
+	Periode demiJourneeConcernant;
+	unsigned int identifiantAbsence;
+	AbsenceStatus status;
 } Absence;
 
 typedef struct
 {
 	char nomEtudiant[MAX_CHAR];
-	int numeroGroupe;
+	unsigned int numeroGroupe;
 	Absence absences[MAX_ABSENCES];
-	int nombreAbsences;
-	int identifiant;
+	unsigned int nombreAbsences;
+	unsigned int identifiantEtudiant;
 } Etudiant;
 
 void initializerTableauEtudiants(Etudiant* etudiants);
-
-
-void faireInscription(Etudiant* tableauEtudiants, int* indice, char nom[MAX_CHAR], int numeroGroupe);
-
+void faireInscription(Etudiant* tableauEtudiants, unsigned int* nombreEtudiantsInscrits, const char* nom,
+                      unsigned int numeroGroupe);
 EtudiantStatus verifierInscriptionStatus(const Etudiant* tableEtudiants, const char* nomEtudiant,
-	int nombreEtudiantsInscrits, int numeroGroupe);
-
-void gererCommandeInscription(Etudiant* tableauEtudiants, int* nombreEtudiantsInscrits);
-
-AbsenceStatus verifierAbsence(int etudiantId, int jour, char periode[3], const Etudiant* tableEtudiants);
-
-void enregistrerAbsence(Etudiant* etudiants, int etudiantId, int jour, char* periode);
-
-void gererCommandeAbsence(Etudiant* tableauEtudiants, int* totalAbsences);
-
+                                         unsigned int nombreEtudiantsInscrits, unsigned int numeroGroupe);
+void gererCommandeInscription(Etudiant* tableauEtudiants, unsigned int* nombreEtudiantsInscrits);
+AbsenceStatus verifierAbsence(unsigned int etudiantId, unsigned int jour, const char* periode,
+                              const Etudiant* tableEtudiants);
+void enregistrerAbsence(Etudiant* etudiants, unsigned int etudiantId, unsigned int jour, const char* periode,
+                        unsigned int* totalAbsences);
+void gererCommandeAbsence(Etudiant* tableauEtudiants, unsigned int* totalAbsences);
 int comparer(const void* etudiantA, const void* etudiantB);
-
-
-void afficherListeEtudiants(const int nombreEtudiantsInscrits, const Etudiant* tableauEtudiants);
+void afficherListeEtudiants(unsigned int nombreEtudiantsInscrits, Etudiant* tableauEtudiants);
+Absence* trouverAbsence(Etudiant* tableauEtudiants, unsigned int identificateurAbsence);
+void gererCommandeJustificatif(Etudiant* tableauEtudiants);
+void supprimerEspacesGauche(char* str);
 
 int main()
 {
-	Etudiant tableauEtudiants[MAX_ETUDIANTS];
-	int nombreEtudiantsInscrits = 0;
-	int totalAbsences = 0;
+	// Allocate tableauEtudiants on the heap
+
+	Etudiant* tableauEtudiants = (Etudiant*)malloc(MAX_ETUDIANTS * sizeof(Etudiant));
+
+	if (tableauEtudiants == NULL)
+	{
+		printf("Erreur d'allocation de memoire.\n");
+
+		return 1; // Exit if memory allocation fails
+	}
+
+
+	unsigned int nombreEtudiantsInscrits = 0;
+
+	unsigned int totalAbsences = 0;
+
 
 	initializerTableauEtudiants(tableauEtudiants);
 
+
 	while (1)
 	{
-		char entree[MAX_CHAR] = { 0 };
-		scanf("%30s", entree);
+		char entree[MAX_CHAR] = {0};
+
+		if (scanf("%30s", entree) != 1)
+		{
+			printf("Erreur de lecture.\n");
+
+			continue;
+		}
+
 
 		if (strcmp(entree, "exit") == 0)
 		{
-			return 0;
+			break; // Exit the loop instead of returning
 		}
+
 		if (strcmp(entree, "inscription") == 0)
 		{
 			gererCommandeInscription(tableauEtudiants, &nombreEtudiantsInscrits);
@@ -92,59 +111,97 @@ int main()
 		}
 		else if (strcmp(entree, "justificatif") == 0)
 		{
+			gererCommandeJustificatif(tableauEtudiants);
+		}
+		else if (strcmp(entree, "validations") == 0)
+		{
+			int aucuneabsenceAttente = 0;
+
+			for (unsigned int i = 0; i < nombreEtudiantsInscrits; i++)
+			{
+				for (unsigned int j = 0; j < MAX_ABSENCES; j++)
+				{
+					if ((tableauEtudiants[i].absences[j].status == ENCOURS || tableauEtudiants[i].absences[j].status ==
+						NON_JUSTIFIE) && tableauEtudiants[i].absences[j].justificatif[0] != '\0')
+					{
+						unsigned int identifiantAffiche = (tableauEtudiants[i].absences[j].identifiantAbsence % 80 == 0)
+							                                  ? 80
+							                                  : tableauEtudiants[i].absences[j].identifiantAbsence % 80;
+
+						printf("[%d] (%d) %s %d %d/%s (%s)\n", identifiantAffiche,
+						       tableauEtudiants[i].identifiantEtudiant, tableauEtudiants[i].nomEtudiant,
+						       tableauEtudiants[i].numeroGroupe, tableauEtudiants[i].absences[j].jourConcernant,
+						       (tableauEtudiants[i].absences[j].demiJourneeConcernant == AM) ? "am" : "pm",
+						       tableauEtudiants[i].absences[j].justificatif);
+
+						aucuneabsenceAttente++;
+					}
+				}
+			}
+
+			if (aucuneabsenceAttente == 0)
+			{
+				printf("Aucune validation en attente\n");
+			}
 		}
 		else
 		{
-			// Attrape les erreurs de commande, nettoie le buffer et continue le programme.
-			printf("Comande invalide\n");
-			int c;
-			while ((c = getchar()) != '\n' && c != EOF);
+			printf("Commande invalide\n");
+
+			while (getchar() != '\n'); // Nettoyage du buffer en cas d'erreur
 		}
 	}
+
+
+	// Free allocated memory
+
+	free(tableauEtudiants);
+
+	return 0;
 }
 
-//initializer le tableau des etudiants avec des valeurs egal a 0 pour des entiers et '\0' pour des chaines de char.
 void initializerTableauEtudiants(Etudiant* etudiants)
 {
 	assert(etudiants != NULL);
-	for (int i = 0; i < 100; ++i)
+	for (int i = 0; i < MAX_ETUDIANTS; ++i)
 	{
-		etudiants[i].identifiant = i;
+		etudiants[i].identifiantEtudiant = i + 1;
 		etudiants[i].nomEtudiant[0] = '\0';
 		etudiants[i].nombreAbsences = 0;
 		etudiants[i].numeroGroupe = 0;
 
-		for (int j = 0; j < 80; ++j)
+		for (int j = 0; j < MAX_ABSENCES; ++j)
 		{
 			etudiants[i].absences[j].demiJourneeConcernant = 0;
 			etudiants[i].absences[j].jourConcernant = 0;
 			etudiants[i].absences[j].justificatif[0] = '\0';
+			etudiants[i].absences[j].status = -1;
+			etudiants[i].absences[j].identifiantAbsence = 0;
 		}
 	}
 }
 
-void faireInscription(Etudiant* tableauEtudiants, int* indice, char nom[MAX_CHAR], int numeroGroupe)
+void faireInscription(Etudiant* tableauEtudiants, unsigned int* nombreEtudiantsInscrits, const char* nom,
+                      unsigned int numeroGroupe)
 {
+	assert(nom != NULL);
 	assert(numeroGroupe > 0);
-	assert(*indice >= 0 && *indice < MAX_ETUDIANTS);
+	assert(*nombreEtudiantsInscrits >= 0 && *nombreEtudiantsInscrits < MAX_ETUDIANTS);
 	assert(tableauEtudiants != NULL);
-	if (nom == NULL || strlen(nom) == 0)
-	{
-		printf("Erreur: Nom de l'etudiant invalide.\n");
-		return;
-	}
-	if (*indice >= MAX_ETUDIANTS)
+
+	if (*nombreEtudiantsInscrits >= MAX_ETUDIANTS)
 	{
 		printf("Erreur: Nombre maximal d'etudiants atteint.\n");
 		return;
 	}
 
-	if (verifierInscriptionStatus(tableauEtudiants, nom, *indice, numeroGroupe) == NONTROUVE)
+	if (verifierInscriptionStatus(tableauEtudiants, nom, *nombreEtudiantsInscrits, numeroGroupe) == NONTROUVE)
 	{
-		strcpy(tableauEtudiants[*indice].nomEtudiant, nom);
-		tableauEtudiants[*indice].numeroGroupe = numeroGroupe;
-		printf("Inscription enregistree (%d)\n", *indice + 1);
-		(*indice)++;
+		strncpy(tableauEtudiants[*nombreEtudiantsInscrits].nomEtudiant, nom, MAX_CHAR - 1);
+		tableauEtudiants[*nombreEtudiantsInscrits].nomEtudiant[MAX_CHAR - 1] = '\0'; // Sécurité pour la terminaison
+		tableauEtudiants[*nombreEtudiantsInscrits].numeroGroupe = numeroGroupe;
+		printf("Inscription enregistree (%d)\n", tableauEtudiants[*nombreEtudiantsInscrits].identifiantEtudiant);
+		(*nombreEtudiantsInscrits)++;
 	}
 	else
 	{
@@ -152,18 +209,15 @@ void faireInscription(Etudiant* tableauEtudiants, int* indice, char nom[MAX_CHAR
 	}
 }
 
-// verifie si un etudiant est ou n'est pas deja inscrit dans la table.
 EtudiantStatus verifierInscriptionStatus(const Etudiant* tableEtudiants, const char* nomEtudiant,
-	const int nombreEtudiantsInscrits, const int numeroGroupe)
+                                         unsigned int nombreEtudiantsInscrits, unsigned int numeroGroupe)
 {
-	assert(tableEtudiants != NULL && nomEtudiant != NULL);
+	assert(tableEtudiants != NULL);
+	assert(nomEtudiant != NULL);
 
-
-	for (int i = 0; i < nombreEtudiantsInscrits; i++)
+	for (unsigned int i = 0; i < nombreEtudiantsInscrits; i++)
 	{
-		//si le nom existe ou si le nom n'est pas vide
-		if (strcmp(tableEtudiants[i].nomEtudiant, nomEtudiant) == 0
-			&& tableEtudiants[i].nomEtudiant[0] != '\0' && tableEtudiants[i].numeroGroupe == numeroGroupe)
+		if (strcmp(tableEtudiants[i].nomEtudiant, nomEtudiant) == 0 && tableEtudiants[i].numeroGroupe == numeroGroupe)
 		{
 			return TROUVE;
 		}
@@ -171,23 +225,22 @@ EtudiantStatus verifierInscriptionStatus(const Etudiant* tableEtudiants, const c
 	return NONTROUVE;
 }
 
-void gererCommandeInscription(Etudiant* tableauEtudiants, int* nombreEtudiantsInscrits)
+void gererCommandeInscription(Etudiant* tableauEtudiants, unsigned int* nombreEtudiantsInscrits)
 {
 	char nom[MAX_CHAR];
 	int numero;
 
 	if (scanf("%30s %d", nom, &numero) != 2)
 	{
-		printf("Commande invalide \n");
+		printf("Commande invalide\n");
+		return;
 	}
-	else
-	{
-		faireInscription(tableauEtudiants, nombreEtudiantsInscrits, nom, numero);
-	}
+
+	faireInscription(tableauEtudiants, nombreEtudiantsInscrits, nom, numero);
 }
 
-//defini le status d'une  absence
-AbsenceStatus verifierAbsence(int etudiantId, int jour, char periode[3], const Etudiant* tableEtudiants)
+AbsenceStatus verifierAbsence(unsigned int etudiantId, unsigned int jour, const char* periode,
+                              const Etudiant* tableEtudiants)
 {
 	if (etudiantId < 1 || etudiantId > MAX_ETUDIANTS || tableEtudiants == NULL)
 	{
@@ -199,16 +252,23 @@ AbsenceStatus verifierAbsence(int etudiantId, int jour, char periode[3], const E
 		return IDENTIFIANT_INVALIDE;
 	}
 
-	if (jour < 1 || jour > 40) { return DATE_INVALIDE; }
-	if (strcmp(periode, "am") != 0 && strcmp(periode, "pm") != 0) { return DEMI_JOURNEE_INVALIDE; }
+	if (jour < 1 || jour > 40)
+	{
+		return DATE_INVALIDE;
+	}
 
-	int nombreAbsences = tableEtudiants[etudiantId - 1].nombreAbsences;
+	if (strcmp(periode, "am") != 0 && strcmp(periode, "pm") != 0)
+	{
+		return DEMI_JOURNEE_INVALIDE;
+	}
+
+	unsigned int nombreAbsences = tableEtudiants[etudiantId - 1].nombreAbsences;
 	if (nombreAbsences < 0 || nombreAbsences >= MAX_ABSENCES)
 	{
 		return DEPASSEMENT_DE_FORMAT;
 	}
 
-	for (int i = 0; i < nombreAbsences; i++)
+	for (unsigned int i = 0; i < nombreAbsences; i++)
 	{
 		Absence absence = tableEtudiants[etudiantId - 1].absences[i];
 		if (absence.jourConcernant == jour &&
@@ -222,93 +282,186 @@ AbsenceStatus verifierAbsence(int etudiantId, int jour, char periode[3], const E
 	return ABSENCE_NON_CONNUE;
 }
 
-void enregistrerAbsence(Etudiant* etudiants, int etudiantId, int jour, char* periode)
+void enregistrerAbsence(Etudiant* etudiants, unsigned int etudiantId, unsigned int jour, const char* periode,
+                        unsigned int* totalAbsences)
 {
-	int absenceNumero = etudiants[etudiantId - 1].nombreAbsences;
+	unsigned int absenceNumero = etudiants[etudiantId - 1].nombreAbsences;
+	if (absenceNumero >= MAX_ABSENCES)
+	{
+		printf("Nombre maximal d'absences atteint pour cet etudiant.\n");
+		return;
+	}
+
 	etudiants[etudiantId - 1].absences[absenceNumero].justificatif[0] = '\0';
 	etudiants[etudiantId - 1].absences[absenceNumero].jourConcernant = jour;
-	etudiants[etudiantId - 1].absences[absenceNumero].demiJourneeConcernant = strcmp(periode, "am") == 0 ? AM : PM;
-	++etudiants[etudiantId - 1].nombreAbsences;
+	etudiants[etudiantId - 1].absences[absenceNumero].demiJourneeConcernant = (strcmp(periode, "am") == 0) ? AM : PM;
+	etudiants[etudiantId - 1].absences[absenceNumero].status = ATTENTE_JUSTIFICATIF;
+	++(*totalAbsences);
+	etudiants[etudiantId - 1].absences[absenceNumero].identifiantAbsence = *totalAbsences;
+	etudiants[etudiantId - 1].nombreAbsences++;
 }
 
-void gererCommandeAbsence(Etudiant* tableauEtudiants, int* totalAbsences)
+void gererCommandeAbsence(Etudiant* tableauEtudiants, unsigned int* totalAbsences)
 {
 	int identifiantEtudiant;
 	int jour;
 	char periode[3];
-	scanf("%d %d %2s", &identifiantEtudiant, &jour, periode);
-	AbsenceStatus status = verifierAbsence(identifiantEtudiant, jour, periode, tableauEtudiants);
 
+	if (scanf("%d %d %2s", &identifiantEtudiant, &jour, periode) != 3)
+	{
+		printf("Erreur de saisie des donnees.\n");
+		return;
+	}
+
+	AbsenceStatus status = verifierAbsence(identifiantEtudiant, jour, periode, tableauEtudiants);
 
 	switch (status)
 	{
 	case ABSENCE_NON_CONNUE:
-		enregistrerAbsence(tableauEtudiants, identifiantEtudiant, jour, periode);
-		(*totalAbsences)++;
+		enregistrerAbsence(tableauEtudiants, identifiantEtudiant, jour, periode, totalAbsences);
 		printf("Absence enregistree [%d]\n", *totalAbsences);
 		break;
-	case IDENTIFIANT_INVALIDE: printf("Identifiant incorrect\n");
+	case IDENTIFIANT_INVALIDE:
+		printf("Identifiant incorrect\n");
 		break;
-	case DEMI_JOURNEE_INVALIDE: printf("Demi-journee incorrecte\n");
+	case DEMI_JOURNEE_INVALIDE:
+		printf("Demi-journee incorrecte\n");
 		break;
-	case ABSENCE_DEJA_CONNUE: printf("Absence deja connue\n");
+	case ABSENCE_DEJA_CONNUE:
+		printf("Absence deja connue\n");
 		break;
-	case DATE_INVALIDE: printf("Date incorrecte\n");
+	case DATE_INVALIDE:
+		printf("Date incorrecte\n");
 		break;
-	case DEPASSEMENT_DE_FORMAT: printf("L'etudiant a depasse le nombre de absences possible.");
+	case DEPASSEMENT_DE_FORMAT:
+		printf("L'etudiant a depasse le nombre d'absences possible.\n");
 		break;
-	default: printf("Erreur inconnue\n");
+	default:
+		printf("Erreur inconnue\n");
 		break;
 	}
 }
 
 int comparer(const void* etudiantA, const void* etudiantB)
 {
-	// conversion
-	const Etudiant* etudiant1 = *(const Etudiant**)etudiantA;
-	const Etudiant* etudiant2 = *(const Etudiant**)etudiantB;
-	// décision (e1 plus petit que e2 ou égal ou plus grand ?)
+	const Etudiant* etudiant1 = (const Etudiant*)etudiantA;
+	const Etudiant* etudiant2 = (const Etudiant*)etudiantB;
+
 	if (etudiant1->numeroGroupe < etudiant2->numeroGroupe)
-		return -1; // e1 est plus petit  que e2
+		return -1;
 	if (etudiant1->numeroGroupe > etudiant2->numeroGroupe)
-		return 1; // e1 est plus grand  que e2
-	// ici on sait que etudiant1->numeroGroupe == etudiant2->numeroGroupe 
-	return strcmp(etudiant1->nomEtudiant, etudiant2->nomEtudiant); // on compare les 2 noms
+		return 1;
+	return strcmp(etudiant1->nomEtudiant, etudiant2->nomEtudiant);
 }
 
-void afficherListeEtudiants(const int nombreEtudiantsInscrits, const Etudiant* tableauEtudiants)
+void afficherListeEtudiants(unsigned int nombreEtudiantsInscrits, Etudiant* tableauEtudiants)
 {
-	int jourCourant;
-	scanf("%d", &jourCourant);
-	if (jourCourant < 1)
+	unsigned int jourCourant;
+	if (scanf("%d", &jourCourant) != 1 || jourCourant < 1)
 	{
 		printf("Date incorrecte\n");
 		return;
 	}
+
 	if (nombreEtudiantsInscrits == 0)
 	{
 		printf("Aucun inscrit\n");
 		return;
 	}
-	const Etudiant* ptrEtudiants[MAX_ETUDIANTS];
-	for (int i = 0; i < nombreEtudiantsInscrits; i++)
+
+	Etudiant tableauCopie[MAX_ETUDIANTS];
+	memcpy(tableauCopie, tableauEtudiants, nombreEtudiantsInscrits * sizeof(Etudiant));
+
+	qsort(tableauCopie, nombreEtudiantsInscrits, sizeof(Etudiant), comparer);
+
+	for (unsigned int i = 0; i < nombreEtudiantsInscrits; i++)
 	{
-		ptrEtudiants[i] = &tableauEtudiants[i];
-	}
-	qsort(ptrEtudiants, nombreEtudiantsInscrits, sizeof(const Etudiant*), comparer);
-	for (int i = 0; i < nombreEtudiantsInscrits; i++)
-	{
-		printf("(%d) %-30s %3d ", ptrEtudiants[i]->identifiant + 1, ptrEtudiants[i]->nomEtudiant,
-			ptrEtudiants[i]->numeroGroupe);
-		int totalabsence = 0;
-		for (int j = 0; j < MAX_ABSENCES; ++j)
+		printf("(%d) %-30s %3d ", tableauCopie[i].identifiantEtudiant, tableauCopie[i].nomEtudiant,
+		       tableauCopie[i].numeroGroupe);
+
+		int totalAbsence = 0;
+		for (unsigned int j = 0; j < tableauCopie[i].nombreAbsences; ++j)
 		{
-			if (ptrEtudiants[i]->absences[j].jourConcernant <= jourCourant && ptrEtudiants[i]->absences[j].
-				jourConcernant != 0)
+			if (tableauCopie[i].absences[j].jourConcernant <= jourCourant && tableauCopie[i].absences[j].jourConcernant
+				!= 0)
 			{
-				++totalabsence;
+				totalAbsence++;
 			}
 		}
-		printf("%3d\n", totalabsence);
+		printf("%3d\n", totalAbsence);
 	}
-}*/
+}
+
+Absence* trouverAbsence(Etudiant* tableauEtudiants, unsigned int identificateurAbsence)
+{
+	for (int i = 0; i < MAX_ETUDIANTS; i++)
+	{
+		for (int j = 0; j < MAX_ABSENCES; j++)
+		{
+			if (tableauEtudiants[i].absences[j].identifiantAbsence == identificateurAbsence && tableauEtudiants[i].
+				absences[j].jourConcernant != 0)
+			{
+				return &tableauEtudiants[i].absences[j];
+			}
+		}
+	}
+	return NULL;
+}
+
+void gererCommandeJustificatif(Etudiant* tableauEtudiants)
+{
+	unsigned int identificateurAbsence;
+	unsigned int jour;
+	char justificatif[51];
+	scanf("%d %d", &identificateurAbsence, &jour);
+
+	if (fgets(justificatif, sizeof(justificatif), stdin) != NULL)
+	{
+		supprimerEspacesGauche(justificatif);
+		size_t longueur = strlen(justificatif);
+		if (justificatif[longueur - 1] == '\n')
+		{
+			justificatif[longueur - 1] = '\0';
+		}
+	}
+	Absence* absence = trouverAbsence(tableauEtudiants, identificateurAbsence);
+	if (absence == NULL)
+	{
+		printf("Identifiant incorrect\n");
+	}
+	else if (absence->justificatif[0] != '\0')
+	{
+		printf("Justificatif deja connu\n");
+	}
+	else if (absence->jourConcernant > jour)
+	{
+		printf("Date incorrecte\n");
+	}
+	else if (jour >= absence->jourConcernant + 3)
+	{
+		strncpy(absence->justificatif, justificatif, MAX_CHAR_JUSTIFICATIF - 1);
+		absence->status = NON_JUSTIFIE;
+		printf("Justificatif enregistre\n");
+	}
+	else
+	{
+		strncpy(absence->justificatif, justificatif, MAX_CHAR_JUSTIFICATIF - 1);
+		absence->status = ENCOURS;
+		printf("Justificatif enregistre\n");
+	}
+}
+
+void supprimerEspacesGauche(char* str)
+{
+	int i = 0;
+
+	while (isspace((unsigned char)str[i]))
+	{
+		i++;
+	}
+
+	if (i > 0)
+	{
+		memmove(str, str + i, strlen(str) - i + 1);
+	}
+}

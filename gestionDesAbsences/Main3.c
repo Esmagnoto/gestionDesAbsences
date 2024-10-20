@@ -1,3 +1,4 @@
+/*
 #include <stdio.h>
 #include <assert.h>
 #include <ctype.h>
@@ -478,5 +479,6 @@ int trouverAbsence(Etudiant* tableauEtudiants, unsigned int identificateurAbsenc
     }
     return 0;
 }
+#2#
 #1#
 */
