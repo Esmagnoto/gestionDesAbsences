@@ -1,3 +1,4 @@
+/*
 #include <stdio.h>
 #include <assert.h>
 #include <ctype.h>
@@ -465,3 +466,4 @@ void supprimerEspacesGauche(char* str)
 		memmove(str, str + i, strlen(str) - i + 1);
 	}
 }
+*/
