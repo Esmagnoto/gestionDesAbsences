@@ -96,7 +96,7 @@ int comparerPointeurs(const void* a, const void* b);
 int comparer(const void* etudiantA, const void* etudiantB);
 
 // Affichage de la liste triée en utilisant les pointeurs
-void afficherListeEtudiant(promotion* promo, etudiant** tableauPointeursEtudiants, int jourCourant);
+void afficherListeEtudiant(promotion* promo, int jourCourant);
 
 int main()
 {
@@ -352,17 +352,8 @@ void gererCommandeEtudiants(promotion* promo)
 		return;
 	}
 
-	etudiant* tableauPointeursEtudiants[MAXETUDIANTS] = {0};
-	for (int i = 0; i < promo->cmpEtudiants; i++)
-	{
-		tableauPointeursEtudiants[i] = &promo->tableauEtudiants[i];
-	}
-
-	// Tri des pointeurs (au lieu de trier les étudiants eux-mêmes)
-	qsort(tableauPointeursEtudiants, promo->cmpEtudiants, sizeof(etudiant*), comparerPointeurs);
-
 	// Affichage de la liste triée en utilisant les pointeurs
-	afficherListeEtudiant(promo, tableauPointeursEtudiants, jourCourant);
+	afficherListeEtudiant(promo, jourCourant);
 
 
 	/*promotion promoCopie;
@@ -390,40 +381,60 @@ void gererCommandeEtudiants(promotion* promo)
 		}*/
 }
 
-void afficherListeEtudiant(promotion* promo, etudiant** tableauPointeursEtudiants, int jourCourant)
+//afficher un etudiant, complementaire de la fonction afficher liste etudiant, sa print les info d'un etudiant
+void afficherEtudiant(promotion* promo, int jourCourant, int largeurNom)
 {
-	int largeurNom = 0;
+	etudiant* etu = promo.
+	printf("(%d) %-*s %3d ",
+		etu->identifiantEtudiant,  // Affichage de l'identifiant de l'étudiant
+		largeurNom, etu->nomEtudiant,  // Affichage du nom de l'étudiant avec largeur ajustée
+		etu->numeroGroupe);  // Affichage du groupe de l'étudiant
 
-	// Trouver la longueur maximale du nom d'étudiant
-	for (int i = 0; i < promo->cmpEtudiants; i++)
+	// Vérification qu'il y a des absences avant de boucler
+	if (promo->cmpAbsences > 0)
 	{
-		int longueurNom = strlen(tableauPointeursEtudiants[i]->nomEtudiant);
-		if (longueurNom > largeurNom)
-		{
-			largeurNom = longueurNom;
-		}
-	}
-	for (int i = 0; i < promo->cmpEtudiants; i++)
-	{
-		printf("(%d) %-*s %3d ",
-		       tableauPointeursEtudiants[i]->identifiantEtudiant,
-		       largeurNom, tableauPointeursEtudiants[i]->nomEtudiant,
-		       tableauPointeursEtudiants[i]->numeroGroupe);
-
-		// Calcul du total d'absences pour cet étudiant
+		// Calcul du total des absences pour cet étudiant jusqu'au jour courant
 		int totalAbsence = 0;
 		for (int j = 0; j < promo->cmpAbsences; ++j)
 		{
-			if (promo->tableauAbsences[j].identifiantEtudiant == tableauPointeursEtudiants[i]->identifiantEtudiant &&
+			if (promo->tableauAbsences[j].identifiantEtudiant == etu->identifiantEtudiant &&
 				promo->tableauAbsences[j].jourConcernant <= jourCourant &&
 				promo->tableauAbsences[j].jourConcernant != 0)
 			{
 				totalAbsence++;
 			}
 		}
-		printf("%d\n", totalAbsence);
+		printf("%d\n", totalAbsence);  // Affichage du total des absences
 	}
 }
+
+
+void afficherListeEtudiant(promotion* promo, int jourCourant)
+{
+	int largeurNom = 0;
+	etudiant* tableauPointeursEtudiants[MAXETUDIANTS] = { 0 };
+
+	// Trouver la longueur maximale du nom d'étudiant
+	for (int i = 0; i < promo->cmpEtudiants; i++)
+	{
+		tableauPointeursEtudiants[i] = &promo->tableauEtudiants[i];  // Initialisation des pointeurs vers les étudiants
+		int longueurNom = strlen(promo->tableauEtudiants[i].nomEtudiant);
+		if (longueurNom > largeurNom)
+		{
+			largeurNom = longueurNom;  // Mise à jour de la largeur maximale du nom
+		}
+	}
+
+	// Tri des pointeurs vers les étudiants par ordre alphabétique (ou selon d'autres critères)
+	qsort(tableauPointeursEtudiants, promo->cmpEtudiants, sizeof(etudiant*), comparerPointeurs);
+
+	// Affichage de chaque étudiant
+	for (int i = 0; i < promo->cmpEtudiants; i++)
+	{
+		afficherEtudiant(tableauPointeursEtudiants[i], promo, jourCourant, largeurNom);  // Utilisation du pointeur trié
+	}
+}
+
 
 // returner une absence enregistre
 absence* trouverAbsence(promotion* promo, int identificateurAbsence)
@@ -562,6 +573,170 @@ void gererCommandeValidations(promotion* promo)
 }
 
 
+void gererCommandeValidation(promotion* promo)
+{
+	int identifiantAbsence;
+	char validation[3];
+	scanf("%d %2s", &identifiantAbsence, validation);
+	absence* absence = trouverAbsence(promo, identifiantAbsence);
+	if (absence == NULL)
+	{
+		printf("Identifiant incorrect\n");
+	}
+	else if (absence->status == JUSTIFIE && absence->justificatif[0] != '\0')
+	{
+		printf("Validation deja connue\n");
+	}
+	else if (absence->status != ENCOURS)
+	{
+		printf("Identifiant incorrect\n");
+	}
+	else if (strcmp(validation, "ok") != 0 && strcmp(validation, "ko") != 0)
+	{
+		printf("Code incorrect\n");
+	}
+	else
+	{
+		printf("Validation enregistree\n");
+		absence->status = strcmp(validation, "ok") == 0 ? JUSTIFIE : NONJUSTIFIE;
+	}
+}
+
+void gereCommandeEtudiant(promotion* promo)
+{
+	int identifiantEtudiant;
+	int jourCourant;
+	scanf("%d %d", &identifiantEtudiant, &jourCourant);
+	char* nom = promo->tableauEtudiants[identifiantEtudiant-1].nomEtudiant;
+	int numero = promo->tableauEtudiants[identifiantEtudiant-1].numeroGroupe;
+	if (verifierInscriptionStatus(promo, nom, numero) == NONTROUVE)
+	{
+		printf("Identifiant incorrect\n");
+	}
+	else if (jourCourant < 1)
+	{
+		printf("Date incorrecte");
+	}
+	else
+	{
+		int largeurNom = strlen(promo->tableauEtudiants[identifiantEtudiant - 1].nomEtudiant);
+
+		// Afficher les informations de l'étudiant
+		afficherEtudiant(promo, jourCourant, identifiantEtudiant, largeurNom);
+
+		// Affichage des absences, triées par statut et jour, selon la date courante
+		int absencesAttenteJustificatif = 0;
+		int absencesEnCours = 0;
+		int absencesJustifiees = 0;
+		int absencesNonJustifiees = 0;
+
+		// Parcourir les absences et les classer par statut
+		for (int i = 0; i < promo->cmpAbsences; i++)
+		{
+			absence* abs = &promo->tableauAbsences[i];
+
+			// Ne traiter que les absences antérieures ou égales à la date du jour courant
+			if (abs->jourConcernant > jourCourant) continue;
+
+			// Absences en attente de justificatif
+			if (abs->status == ATTENTEJUSTIFICATIF)
+			{
+				if (absencesAttenteJustificatif == 0)
+				{
+					printf("-En attente justificatif\n");
+				}
+				// Ajustement dynamique du printf en fonction de la présence du justificatif
+				if (abs->justificatif[0] != '\0')
+				{
+					printf("[%d] %d/%s (%s)\n", abs->identifiantEtudiant,
+					       abs->jourConcernant,
+					       abs->demiJourneeConcernant == AM ? "am" : "pm",
+					       abs->justificatif);
+				}
+				else
+				{
+					printf("[%d] %d/%s\n", abs->identifiantEtudiant,
+					       abs->jourConcernant,
+					       abs->demiJourneeConcernant == AM ? "am" : "pm");
+				}
+				absencesAttenteJustificatif++;
+			}
+
+			// Absences en attente de validation
+			else if (abs->status == ENCOURS)
+			{
+				if (absencesEnCours == 0)
+				{
+					printf("-En attente validation\n");
+				}
+				// Ajustement dynamique du printf en fonction de la présence du justificatif
+				if (abs->justificatif[0] != '\0')
+				{
+					printf("[%d] %d/%s (%s)\n", abs->identifiantEtudiant,
+					       abs->jourConcernant,
+					       abs->demiJourneeConcernant == AM ? "am" : "pm",
+					       abs->justificatif);
+				}
+				else
+				{
+					printf("[%d] %d/%s\n", abs->identifiantEtudiant,
+					       abs->jourConcernant,
+					       abs->demiJourneeConcernant == AM ? "am" : "pm");
+				}
+				absencesEnCours++;
+			}
+
+			// Absences justifiées
+			else if (abs->status == JUSTIFIE)
+			{
+				if (absencesJustifiees == 0)
+				{
+					printf("-Justifiees\n");
+				}
+				// Ajustement dynamique du printf en fonction de la présence du justificatif
+				if (abs->justificatif[0] != '\0')
+				{
+					printf("[%d] %d/%s (%s)\n", abs->identifiantEtudiant,
+					       abs->jourConcernant,
+					       abs->demiJourneeConcernant == AM ? "am" : "pm",
+					       abs->justificatif);
+				}
+				else
+				{
+					printf("[%d] %d/%s\n", abs->identifiantEtudiant,
+					       abs->jourConcernant,
+					       abs->demiJourneeConcernant == AM ? "am" : "pm");
+				}
+				absencesJustifiees++;
+			}
+
+			// Absences non-justifiées
+			else if (abs->status == NONJUSTIFIE)
+			{
+				if (absencesNonJustifiees == 0)
+				{
+					printf("-Non-justifiees\n");
+				}
+				// Ajustement dynamique du printf en fonction de la présence du justificatif
+				if (abs->justificatif[0] != '\0')
+				{
+					printf("[%d] %d/%s (%s)\n", abs->identifiantEtudiant,
+					       abs->jourConcernant,
+					       abs->demiJourneeConcernant == AM ? "am" : "pm",
+					       abs->justificatif);
+				}
+				else
+				{
+					printf("[%d] %d/%s\n", abs->identifiantEtudiant,
+					       abs->jourConcernant,
+					       abs->demiJourneeConcernant == AM ? "am" : "pm");
+				}
+				absencesNonJustifiees++;
+			}
+		}
+	}
+}
+
 // Fonction pour appeler la fonction correspondant des commandes C0 à C8
 void gererCommande(promotion* promo)
 {
@@ -604,31 +779,11 @@ void gererCommande(promotion* promo)
 		}
 		else if (strcmp(entree, "validation") == 0)
 		{
-			int identifiantAbsence;
-			char validation[3];
-			scanf("%d %2s", &identifiantAbsence, validation);
-			absence* absence = trouverAbsence(promo, identifiantAbsence);
-			if (absence == NULL)
-			{
-				printf("Identifiant incorrect\n");
-			}
-			else if (absence->status == JUSTIFIE && absence->justificatif[0] != '\0')
-			{
-				printf("Validation deja connue\n");
-			}
-			else if (absence->status != ENCOURS)
-			{
-				printf("Identifiant incorrect\n");
-			}
-			else if (strcmp(validation, "ok") != 0 && strcmp(validation, "ko") != 0)
-			{
-				printf("Code incorrect\n");
-			}
-			else
-			{
-				printf("Validation enregistree\n");
-				absence->status = strcmp(validation, "ok") == 0 ? JUSTIFIE : NONJUSTIFIE;
-			}
+			gererCommandeValidation(promo);
+		}
+		else if (strcmp(entree, "etudiant") == 0)
+		{
+			gereCommandeEtudiant(promo);
 		}
 		else
 		{
